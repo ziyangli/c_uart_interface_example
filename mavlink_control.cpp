@@ -1,4 +1,4 @@
-/** This example is public domain. */
+ /** This example is public domain. */
 
 /**
  * @file mavlink_control.cpp
@@ -13,6 +13,11 @@
  *
  */
 
+/**
+ * TODO: Create simple trajectory, such as takeoff, flying in a circle, and landing
+ * TODO: Add safety, such as instant landing, in case something goes wrong
+ * TODO: Send attitude target message
+ */
 
 // ------------------------------------------------------------------------------
 //   Includes
@@ -25,28 +30,31 @@
 
 
 // ------------------------------------------------------------------------------
-//   Main
+//   TOP
 // ------------------------------------------------------------------------------
 int
-main(int argc, char **argv)
+top(int argc, char **argv)
 {
-	// Default input arguments
+	// --------------------------------------------------------------------------
+	//   DEFAULT INPUT ARGUMENTS
+	// --------------------------------------------------------------------------
+
 	char *uart_name = (char*)"/dev/ttyUSB0";
 	int baudrate = 57600;
+
+
+	// --------------------------------------------------------------------------
+	//   SETUP TERMINAITON SIGNAL
+	// --------------------------------------------------------------------------
+
+	signal(SIGINT, quit_handler);
+
 
 	// --------------------------------------------------------------------------
 	//   PARSE THE COMMANDS
 	// --------------------------------------------------------------------------
 
-	try
-	{
-		parse_commandline(argc, argv, uart_name, baudrate);
-	}
-
-	catch ( int failure )
-	{
-		return failure;
-	}
+	parse_commandline(argc, argv, uart_name, baudrate);
 
 
 	// --------------------------------------------------------------------------
@@ -55,15 +63,7 @@ main(int argc, char **argv)
 
 	printf("OPEN PORT\n");
 
-	try
-	{
-		open_serial(uart_name, baudrate);
-	}
-
-	catch ( int failure )
-	{
-		return failure;
-	}
+	open_serial(uart_name, baudrate);
 
 	printf("\n");
 
@@ -80,24 +80,52 @@ main(int argc, char **argv)
 
 
 	// --------------------------------------------------------------------------
-	//   STREAM COMMANDS
+	//   START OFFBOARD MODE
 	// --------------------------------------------------------------------------
 
 	printf("Start Off-Board Mode\n");
+
+	// send an initial command
+	write_message(0.0, 0.0, 0.0, 0.0);
+
+	// now start the offboard mode
 	start_offboard();
 
-	/**
-	 * Pixhawk needs to see off-board commands at minimum 2Hz, otherwise it
-	 * will go into fail safe mode (and probably descend)
-	 */
+
+	// --------------------------------------------------------------------------
+	//   STREAM COMMANDS
+	// --------------------------------------------------------------------------
+
+	// Pixhawk needs to see off-board commands at minimum 2Hz, otherwise it
+	// will go into fail safe mode (and probably descend)
+
+	// Setpoint Command
+	float sp_x   =  0.0f;
+	float sp_y   =  0.0f;
+	float sp_z   = -1.0f; // Height above take-off point (z points down)
+	float sp_yaw =  0.0f;
+
 	printf("Write Off-Board Commands\n");
-	for (int i=0; i<10; i++)
+
+	// Start Streaming
+	while( CMD_STREAM_FLAG )
 	{
-		usleep(250000);   // Stream at 4 Hz
-		write_message();
+		// Stream at 4 Hz
+		usleep(250000);
+
+		// Write the setpoint message
+		write_message(sp_x, sp_y, sp_z, sp_yaw);
+
+		// this loop exits with Ctrl-C
 	}
 
+
+	// --------------------------------------------------------------------------
+	//   STOP OFFBOARD MODE
+	// --------------------------------------------------------------------------
+
 	printf("Stop Off-Board Mode\n");
+
 	stop_offboard();
 
 	printf("\n");
@@ -180,9 +208,8 @@ read_message()
 //   Write Message
 // ------------------------------------------------------------------------------
 int
-write_message()
+write_message(float x, float y, float z, float yaw)
 {
-
 	// --------------------------------------------------------------------------
 	//   PACK PAYLOAD
 	// --------------------------------------------------------------------------
@@ -193,10 +220,10 @@ write_message()
 	sp.target_system    = sysid;
 	sp.target_component = autopilot_compid;
 	sp.coordinate_frame = MAV_FRAME_LOCAL_NED;
-	sp.x = 1.0f;   // move north one meter
-	sp.y = 0.0f;
-	sp.z = 0.0f;
-	sp.yaw = 0.0f;
+	sp.x = x;
+	sp.y = y;
+	sp.z = z;
+	sp.yaw = yaw;
 
 	// --------------------------------------------------------------------------
 	//   ENCODE
@@ -267,5 +294,33 @@ parse_commandline(int argc, char **argv, char *&uart_name, int &baudrate)
 }
 
 
+// ------------------------------------------------------------------------------
+//    Handle CTRL-C terminate commands from the terminal
+// ------------------------------------------------------------------------------
+void
+quit_handler(int sig)
+{
+	printf("Terminating at user's request\n");
+	CMD_STREAM_FLAG = 0;
+}
+
+
+// ------------------------------------------------------------------------------
+//    Main
+// ------------------------------------------------------------------------------
+int
+main (int argc, char **argv)
+{
+
+	try
+	{
+		return top( argc , argv );
+	}
+	catch ( int failure )
+	{
+		return failure;
+	}
+
+}
 
 

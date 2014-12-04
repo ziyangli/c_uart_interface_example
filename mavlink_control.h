@@ -36,7 +36,18 @@ using namespace std;
 //   Prototypes
 // ------------------------------------------------------------------------------
 
-int read_message();
-int write_message();
-void parse_commandline(int argc, char **argv, char *&uart_name, int &baudrate);
+int main(int argc, char **argv);
+int top(int argc, char **argv);
 
+int read_message();
+int write_message(float x, float y, float z, float yaw);
+
+void parse_commandline(int argc, char **argv, char *&uart_name, int &baudrate);
+void quit_handler(int sig);
+
+
+// ------------------------------------------------------------------------------
+//   Loop control flags
+// ------------------------------------------------------------------------------
+
+int CMD_STREAM_FLAG = 1;
