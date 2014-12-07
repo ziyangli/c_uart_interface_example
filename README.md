@@ -3,7 +3,9 @@ C-UART Interface Example
 
 This is a simple MAVLink to UART interface example for *nix systems that can allow communication between Pixhawk and an offboard computer.
 
-This example will recieve one MAVlink message and send one MAVlink message.
+This example will recieve one MAVlink message and send a few MAVlink messages.
+
+It is a barebones example, a more complete implementation of the offboard interface is available in the object branch.
 
 
 Building
