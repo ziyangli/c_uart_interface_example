@@ -7,6 +7,14 @@ This example will recieve one MAVlink message and send a few MAVlink messages.
 
 It is a barebones example, a more complete implementation of the offboard interface is available in the object branch.
 
+Cloning
+=======
+
+```
+$ git clone https://github.com/mavlink/c_uart_interface_example.git
+$ cd c_uart_interface_example
+$ git submodule update --init
+```
 
 Building
 ========
