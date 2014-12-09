@@ -12,7 +12,7 @@ Cloning
 
 ```
 $ git clone https://github.com/mavlink/c_uart_interface_example.git
-$ cd c_uart_interface_example
+$ cd c_uart_interface_example/
 $ git submodule update --init
 ```
 
