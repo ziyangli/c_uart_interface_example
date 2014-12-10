@@ -1,4 +1,4 @@
- /** This example is public domain. */
+/** This example is public domain. */
 
 /**
  * @file mavlink_control.cpp
@@ -109,15 +109,15 @@ top(int argc, char **argv)
 
 	// Start Streaming
 	while( CMD_STREAM_FLAG )
-	{
-		// Stream at 4 Hz
-		usleep(250000);
+        {
+            // Stream at 4 Hz
+            usleep(250000);
 
-		// Write the setpoint message
-		write_message(sp_x, sp_y, sp_z, sp_yaw);
+            // Write the setpoint message
+            write_message(sp_x, sp_y, sp_z, sp_yaw);
 
-		// this loop exits with Ctrl-C
-	}
+            // this loop exits with Ctrl-C
+        }
 
 
 	// --------------------------------------------------------------------------
@@ -156,104 +156,102 @@ read_message()
 
 	// Blocking wait for new data
 	while (!received)
-	{
-		// ----------------------------------------------------------------------
-		//   READ MESSAGE
-		// ----------------------------------------------------------------------
-		mavlink_message_t message;
-		success = read_serial(message);
+        {
+            // ----------------------------------------------------------------------
+            //   READ MESSAGE
+            // ----------------------------------------------------------------------
+            mavlink_message_t message;
+            success = read_serial(message);
 
-		// ----------------------------------------------------------------------
-		//   HANDLE MESSAGE
-		// ----------------------------------------------------------------------
-		if( success )
-		{
-			// Handle Message ID
-			switch (message.msgid)
-			{
+            // ----------------------------------------------------------------------
+            //   HANDLE MESSAGE
+            // ----------------------------------------------------------------------
+            if( success )
+                {
+                    // Handle Message ID
+                    switch (message.msgid)
+                        {
 
-            case MAVLINK_MSG_ID_HEARTBEAT:
-              {
-                mavlink_heartbeat_t heartbeat;
-                mavlink_msg_heartbeat_decode(&message, &heartbeat);
+                        case MAVLINK_MSG_ID_HEARTBEAT:
+                            {
+                                mavlink_heartbeat_t heartbeat;
+                                mavlink_msg_heartbeat_decode(&message, &heartbeat);
 
-                printf("Got heartbeat.\n");
-                printf("\t custom mode: %u\n", heartbeat.custom_mode);
-                printf("\t base_mode: %u\n", heartbeat.base_mode);
-                printf("\t system_status: %u\n", heartbeat.system_status);
-                break;
-              }
+                                printf("Got heartbeat.\n");
+                                printf("\t custom mode: %u\n", heartbeat.custom_mode);
+                                printf("\t base_mode: %u\n", heartbeat.base_mode);
+                                printf("\t system_status: %u\n", heartbeat.system_status);
+                                break;
+                            }
+                        case MAVLINK_MSG_ID_ATTITUDE:
+                            {
+                                // mavlink_attitude_t attitude;
+                                // mavlink_msg_attitude_decode(&message, &attitude);
+                                // printf("Got message ATTITUDE\n");
+                                // printf("\t time: %u\n", attitude.time_boot_ms);
+                                // printf("\t roll: %f\n", attitude.roll);
+                                // printf("\t pitch: %f\n", attitude.pitch);
+                                // printf("\t yaw: %f\n", attitude.yaw);
+                                break;
+                            }
+                        case MAVLINK_MSG_ID_RC_CHANNELS:
+                            {
 
-            case MAVLINK_MSG_ID_ATTITUDE:
-              {
-                // mavlink_attitude_t attitude;
-                // mavlink_msg_attitude_decode(&message, &attitude);
-                // printf("Got message ATTITUDE\n");
-                // printf("\t time: %u\n", attitude.time_boot_ms);
-                // printf("\t roll: %f\n", attitude.roll);
-                // printf("\t pitch: %f\n", attitude.pitch);
-                // printf("\t yaw: %f\n", attitude.yaw);
-                break;
-              }
-            case MAVLINK_MSG_ID_RC_CHANNELS:
-              {
+                                mavlink_rc_channels_t rc;
+                                mavlink_msg_rc_channels_decode(&message, &rc);
 
-                mavlink_rc_channels_t rc;
-                mavlink_msg_rc_channels_decode(&message, &rc);
+                                if (rc.rssi != 0 )
+                                    {
+                                        printf("Got RC\n");
+                                        printf("\t time (s): %u \n", rc.time_boot_ms/1000);
+                                        printf("\t chan1(roll): %u \n", rc.chan1_raw);
+                                        printf("\t chan2(pitch): %u \n", rc.chan2_raw);
+                                        printf("\t chan3(thrust): %u \n", rc.chan3_raw);
+                                        printf("\t chan4(yaw): %u \n", rc.chan4_raw);
+                                    }
+                                break;
+                            }
+                        case MAVLINK_MSG_ID_MANUAL_CONTROL:
+                            {
+                                mavlink_manual_control_t manual_control;
+                                mavlink_msg_manual_control_decode(&message, &manual_control);
 
-                if (rc.rssi != 0 )
-                  {
-                    printf("Got RC\n");
-                    printf("\t time (s): %u \n", rc.time_boot_ms/1000);
-                    printf("\t chan1(roll): %u \n", rc.chan1_raw);
-                    printf("\t chan2(pitch): %u \n", rc.chan2_raw);
-                    printf("\t chan3(thrust): %u \n", rc.chan3_raw);
-                    printf("\t chan4(yaw): %u \n", rc.chan4_raw);
-                  }
-                break;
-              }
-            case MAVLINK_MSG_ID_MANUAL_CONTROL:
-              {
-                mavlink_manual_control_t manual_control;
-                mavlink_msg_manual_control_decode(&message, &manual_control);
+                                printf("Got manual control\n");
+                                printf(" x: %d \n", manual_control.x);
+                                printf(" y: %d \n", manual_control.y);
+                                printf(" z: %d \n", manual_control.z);
+                                printf(" r: %d \n", manual_control.r);
 
-                printf("Got manual control\n");
-                printf(" x: %d \n", manual_control.x);
-                printf(" y: %d \n", manual_control.y);
-                printf(" z: %d \n", manual_control.z);
-                printf(" r: %d \n", manual_control.r);
+                                break;
+                            }
+                        case MAVLINK_MSG_ID_HIGHRES_IMU:
+                            {
+                                // Decode Message
+                                mavlink_highres_imu_t imu;
+                                mavlink_msg_highres_imu_decode(&message, &imu);
 
-                break;
-              }
+                                // Do something with the message
+                                printf("Got message HIGHRES_IMU (spec: https://pixhawk.ethz.ch/mavlink/#HIGHRES_IMU)\n");
+                                printf("    time: %llu\n", imu.time_usec);
+                                printf("    acc  (NED):\t% f\t% f\t% f (m/s^2)\n", imu.xacc , imu.yacc , imu.zacc );
+                                printf("    gyro (NED):\t% f\t% f\t% f (rad/s)\n", imu.xgyro, imu.ygyro, imu.zgyro);
+                                printf("    mag  (NED):\t% f\t% f\t% f (Ga)\n"   , imu.xmag , imu.ymag , imu.zmag );
+                                printf("    baro: \t %f (mBar)\n"  , imu.abs_pressure);
+                                printf("    altitude: \t %f (m)\n" , imu.pressure_alt);
+                                printf("    temperature: \t %f C\n", imu.temperature );
 
-				case MAVLINK_MSG_ID_HIGHRES_IMU:
-				{
-					// Decode Message
-					mavlink_highres_imu_t imu;
-					mavlink_msg_highres_imu_decode(&message, &imu);
+                                // Receive only one message
+                                received = true;
+                            }
+                            break;
 
-					// Do something with the message
-					printf("Got message HIGHRES_IMU (spec: https://pixhawk.ethz.ch/mavlink/#HIGHRES_IMU)\n");
-					printf("    time: %lu\n", imu.time_usec);
-					printf("    acc  (NED):\t% f\t% f\t% f (m/s^2)\n", imu.xacc , imu.yacc , imu.zacc );
-					printf("    gyro (NED):\t% f\t% f\t% f (rad/s)\n", imu.xgyro, imu.ygyro, imu.zgyro);
-					printf("    mag  (NED):\t% f\t% f\t% f (Ga)\n"   , imu.xmag , imu.ymag , imu.zmag );
-					printf("    baro: \t %f (mBar)\n"  , imu.abs_pressure);
-					printf("    altitude: \t %f (m)\n" , imu.pressure_alt);
-					printf("    temperature: \t %f C\n", imu.temperature );
+                        }
+                    // end: switch msgid
 
-					// Receive only one message
-					received = true;
-				}
-				break;
+                }
+            // end: if read message
 
-			}
-			// end: switch msgid
-
-		}
-		// end: if read message
-
-	}
+        }
 
 	return 0;
 }
@@ -271,7 +269,7 @@ write_message(float x, float y, float z, float yaw)
 	mavlink_set_position_target_local_ned_t sp;
 	sp.time_boot_ms     = 0;
 	sp.type_mask        = MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_POSITION &
-			              MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_YAW_ANGLE;
+        MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_YAW_ANGLE;
 	sp.target_system    = sysid;
 	sp.target_component = autopilot_compid;
 	sp.coordinate_frame = MAV_FRAME_LOCAL_NED;
@@ -368,13 +366,13 @@ main (int argc, char **argv)
 {
 
 	try
-	{
-		return top( argc , argv );
-	}
+        {
+            return top( argc , argv );
+        }
 	catch ( int failure )
-	{
-		return failure;
-	}
+        {
+            return failure;
+        }
 
 }
 
