@@ -56,7 +56,7 @@ toggle_offboard(float sw)
 {
 	// Prepare command for off-board mode
 	mavlink_command_long_t com;
-	
+
 	/* This paramater is what sets the offboard mode
 	   param1 > 0.5f = Enter offboard mode
 	   param2 < 0.5f = Exit offboard mode
@@ -80,9 +80,3 @@ toggle_offboard(float sw)
 		return 0;
 
 }
-
-
-
-
-
-
