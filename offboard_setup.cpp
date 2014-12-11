@@ -1,6 +1,9 @@
 #include "offboard_setup.h"
 #include "serial_port.h"
-#include "system_ids.h"
+
+const uint8_t sysid            = 1;   // The vehicle's system ID (parameter: MAV_SYS_ID)
+const uint8_t autopilot_compid = 50;  // The autopilot component (parameter: MAV_COMP_ID)
+const uint8_t compid           = 110; // The offboard computer component ID */
 
 
 // ------------------------------------------------------------------------------

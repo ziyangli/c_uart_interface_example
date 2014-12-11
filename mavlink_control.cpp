@@ -25,14 +25,25 @@
 
 #include "mavlink_control.h"
 #include "serial_port.h"
-#include "system_ids.h"
+// #include "system_ids.h"
 #include "offboard_setup.h"
 
 #include <time.h>
 #include <sys/time.h>
 
+const uint8_t sysid            = 1;   // The vehicle's system ID (parameter: MAV_SYS_ID)
+const uint8_t autopilot_compid = 50;  // The autopilot component (parameter: MAV_COMP_ID)
+const uint8_t compid           = 110; // The offboard computer component ID */
+
+static int imu_cnt = 0;
+static int att_cnt = 0;
+static int manual_cnt = 0;
+static int gps_cnt = 0;
+static int sys_cnt = 0;
+static int rc_cnt = 0;
+
 void print_current_time(void)
-  {
+{
 
     time_t current_time;
     char* c_time_string;
@@ -41,145 +52,209 @@ void print_current_time(void)
     current_time = time(NULL);
 
     if (current_time == ((time_t)-1))
-    {
-        (void) fprintf(stderr, "Failure to compute the current time.");
-    }
+        {
+            (void) fprintf(stderr, "Failure to compute the current time.");
+        }
 
     /* Convert to local time format. */
     c_time_string = ctime(&current_time);
 
     if (c_time_string == NULL)
-    {
-        (void) fprintf(stderr, "Failure to convert the current time.");
-    }
+        {
+            (void) fprintf(stderr, "Failure to convert the current time.");
+        }
 
     /* Print to stdout. */
     (void) printf("Current time is %s", c_time_string);
 
-  }
+}
 
 int
 top(int argc, char **argv)
 {
 
-  char *uart_name = (char*)"/dev/ttyTHS1";
-  int baudrate = 57600;
+    char *uart_name = (char*)"/dev/ttyTHS1";
+    int baudrate = 921600;
 
-  // --------------------------------------------------------------------------
-  //   SETUP TERMINAITON SIGNAL
-  // --------------------------------------------------------------------------
+    // signal(SIGINT, quit_handler);
 
-  //	signal(SIGINT, quit_handler);
+    parse_commandline(argc, argv, uart_name, baudrate);
 
-  parse_commandline(argc, argv, uart_name, baudrate);
+    printf("OPEN PORT\n");
 
-  printf("OPEN PORT\n");
+    open_serial(uart_name, baudrate);
 
-  open_serial(uart_name, baudrate);
+    printf("\n");
 
-  printf("\n");
-
-  printf("READ MAVLINK\n");
+    printf("READ MAVLINK\n");
 
 
-  struct timeval  tv1, tv2;
+    struct timeval att_tv1, att_tv2;
+    struct timeval imu_tv1, imu_tv2;
+    struct timeval manual_tv1, manual_tv2;
+    struct timeval gps_tv1, gps_tv2;
+    struct timeval sys_tv1, sys_tv2;
+    struct timeval rc_tv1, rc_tv2;
 
-  int cnt = 0;
-  clock_t t_prev;
-  clock_t t_curr;
-  t_prev = clock();
+    int cnt = 0;
+    // clock_t t_prev;
+    // clock_t t_curr;
+    // t_prev = clock();
 
+    // print_current_time();
+    gettimeofday(&att_tv1, NULL);
+    imu_tv1 = att_tv1;
+    manual_tv1 = att_tv1;
+    gps_tv1 = att_tv1;
+    sys_tv1 = att_tv1;
+    rc_tv1 = att_tv1;
 
-  print_current_time();
-  gettimeofday(&tv1, NULL);
-
-  while(1)
-    {
-      read_message();
-      cnt++;
-      if (cnt == 200)
+    while(1)
         {
-          t_curr = clock();
-          gettimeofday(&tv2, NULL);
-          printf("%d frames takes %fms\n", cnt, (double)(t_curr-t_prev) * 1000.0 /CLOCKS_PER_SEC);
+            read_message();
+            // cnt++;
 
-          printf ("Total time = %f seconds\n",
-                  (double) (tv2.tv_usec - tv1.tv_usec) / 1000000 +
-                  (double) (tv2.tv_sec - tv1.tv_sec));
-          gettimeofday(&tv1, NULL);
+            // if (cnt == 200)
+            //    {
+            //       printf("...\n");
+            //      cnt = 0;
+            //  }
 
-          print_current_time();
-          cnt = 0;
-          t_prev = t_curr;
+            if (att_cnt == 200)
+                {
+                    // t_curr = clock();
+                    gettimeofday(&att_tv2, NULL);
+                    // printf("%d frames takes %fms\n", cnt, (double)(t_curr-t_prev) * 1000.0 /CLOCKS_PER_SEC);
+
+                    printf ("%d att time = %f ms\n", att_cnt,
+                            (double) (att_tv2.tv_usec - att_tv1.tv_usec) / 1000 +
+                            (double) (att_tv2.tv_sec - att_tv1.tv_sec) * 1000);
+                    gettimeofday(&att_tv1, NULL);
+
+                    // print_current_time();
+                    att_cnt = 0;
+                    // t_prev = t_curr;
+                }
+
+            if (imu_cnt == 200)
+                {
+                    gettimeofday(&imu_tv2, NULL);
+                    printf("\t%d imu time = %f ms\n", imu_cnt,
+                           (double) (imu_tv2.tv_usec - imu_tv1.tv_usec) / 1000 +
+                           (double) (imu_tv2.tv_sec - imu_tv1.tv_sec) * 1000);
+                    gettimeofday(&imu_tv1, NULL);
+                    imu_cnt = 0;
+                }
+
+            if (manual_cnt == 200)
+                {
+                    gettimeofday(&manual_tv2, NULL);
+                    printf("\t\t%d manual time = %f ms\n", manual_cnt,
+                           (double) (manual_tv2.tv_usec - manual_tv1.tv_usec) / 1000 +
+                           (double) (manual_tv2.tv_sec - manual_tv1.tv_sec) * 1000);
+                    gettimeofday(&manual_tv1, NULL);
+                    manual_cnt = 0;
+
+                }
+
+            if (rc_cnt == 200)
+                {
+                    gettimeofday(&rc_tv2, NULL);
+                    printf("\t\t\t%d rc time = %f ms\n", rc_cnt,
+                           (double) (rc_tv2.tv_usec - rc_tv2.tv_usec) / 1000 +
+                           (double) (rc_tv2.tv_sec - rc_tv1.tv_sec) * 1000);
+                    gettimeofday(&rc_tv1, NULL);
+                    rc_cnt = 0;
+                }
+
+            if (sys_cnt == 50)
+                {
+                    gettimeofday(&sys_tv2, NULL);
+                    printf("\t\t\t\t%d sys time = %f ms\n", sys_cnt,
+                           (double) (sys_tv2.tv_usec - sys_tv2.tv_usec) / 1000 +
+                           (double) (sys_tv2.tv_sec - sys_tv1.tv_sec) * 1000);
+                    gettimeofday(&sys_tv1, NULL);
+                    sys_cnt = 0;
+                }
+
+            if (gps_cnt == 50)
+                {
+                    gettimeofday(&gps_tv2, NULL);
+                    printf("\t\t\t\t\t%d gps time = %f ms\n", gps_cnt,
+                           (double) (gps_tv2.tv_usec - gps_tv2.tv_usec) / 1000 +
+                           (double) (gps_tv2.tv_sec - gps_tv1.tv_sec) * 1000);
+                    gettimeofday(&gps_tv1, NULL);
+                    gps_cnt = 0;
+                }
+
         }
-    }
 
-  printf("\n");
-
-
-  // --------------------------------------------------------------------------
-  //   START OFFBOARD MODE
-  // --------------------------------------------------------------------------
-
-  printf("Start Off-Board Mode\n");
-
-  // send an initial command
-  write_message(0.0, 0.0, 0.0, 0.0);
-
-  // now start the offboard mode
-  start_offboard();
+    printf("\n");
 
 
-  // --------------------------------------------------------------------------
-  //   STREAM COMMANDS
-  // --------------------------------------------------------------------------
+    // --------------------------------------------------------------------------
+    //   START OFFBOARD MODE
+    // --------------------------------------------------------------------------
 
-  // Pixhawk needs to see off-board commands at minimum 2Hz, otherwise it
-  // will go into fail safe mode (and probably descend)
+    printf("Start Off-Board Mode\n");
 
-  // Setpoint Command
-  float sp_x   =  0.0f;
-  float sp_y   =  0.0f;
-  float sp_z   = -1.0f; // Height above take-off point (z points down)
-  float sp_yaw =  0.0f;
+    // send an initial command
+    write_message(0.0, 0.0, 0.0, 0.0);
 
-  printf("Write Off-Board Commands\n");
-
-  // Start Streaming
-  while( CMD_STREAM_FLAG )
-    {
-      // Stream at 4 Hz
-      usleep(250000);
-
-      // Write the setpoint message
-      write_message(sp_x, sp_y, sp_z, sp_yaw);
-
-      // this loop exits with Ctrl-C
-    }
+    // now start the offboard mode
+    start_offboard();
 
 
-  // --------------------------------------------------------------------------
-  //   STOP OFFBOARD MODE
-  // --------------------------------------------------------------------------
+    // --------------------------------------------------------------------------
+    //   STREAM COMMANDS
+    // --------------------------------------------------------------------------
 
-  printf("Stop Off-Board Mode\n");
+    // Pixhawk needs to see off-board commands at minimum 2Hz, otherwise it
+    // will go into fail safe mode (and probably descend)
 
-  stop_offboard();
+    // Setpoint Command
+    float sp_x   =  0.0f;
+    float sp_y   =  0.0f;
+    float sp_z   = -1.0f; // Height above take-off point (z points down)
+    float sp_yaw =  0.0f;
 
-  printf("\n");
+    printf("Write Off-Board Commands\n");
+
+    // Start Streaming
+    while( CMD_STREAM_FLAG )
+        {
+            // Stream at 4 Hz
+            usleep(250000);
+
+            // Write the setpoint message
+            write_message(sp_x, sp_y, sp_z, sp_yaw);
+
+            // this loop exits with Ctrl-C
+        }
 
 
-  // --------------------------------------------------------------------------
-  //   CLOSE PORT
-  // --------------------------------------------------------------------------
+    // --------------------------------------------------------------------------
+    //   STOP OFFBOARD MODE
+    // --------------------------------------------------------------------------
 
-  printf("CLOSE PORT\n");
+    printf("Stop Off-Board Mode\n");
 
-  close_serial();
+    stop_offboard();
 
-  printf("\n");
+    printf("\n");
 
-  return 0;
+
+    // --------------------------------------------------------------------------
+    //   CLOSE PORT
+    // --------------------------------------------------------------------------
+
+    printf("CLOSE PORT\n");
+
+    close_serial();
+
+    printf("\n");
+
+    return 0;
 }
 
 
@@ -190,101 +265,121 @@ int
 read_message()
 {
 
-  bool received = false;      // receive only one message
+    bool received = false;      // receive only one message
 
-  while (!received)
-    {
-      mavlink_message_t message;
-
-      if( read_serial(message) )
+    while (!received)
         {
-          switch (message.msgid)
-            {
-            case MAVLINK_MSG_ID_HEARTBEAT:
-              {
-                mavlink_heartbeat_t heartbeat;
-                mavlink_msg_heartbeat_decode(&message, &heartbeat);
+            mavlink_message_t message;
 
-                // printf("Got heartbeat.\n");
-                // printf("\t custom mode: %u\n", heartbeat.custom_mode);
-                // printf("\t base_mode: %u\n", heartbeat.base_mode);
-                // printf("\t system_status: %u\n", heartbeat.system_status);
+            if( read_serial(message) )
+                {
+                    switch (message.msgid)
+                        {
+                        case MAVLINK_MSG_ID_HEARTBEAT:
+                            {
+                                mavlink_heartbeat_t heartbeat;
+                                mavlink_msg_heartbeat_decode(&message, &heartbeat);
 
-                // received = true;
+                                // printf("Got heartbeat.\n");
+                                // printf("\t custom mode: %u\n", heartbeat.custom_mode);
+                                // printf("\t base_mode: %u\n", heartbeat.base_mode);
+                                // printf("\t system_status: %u\n", heartbeat.system_status);
 
-                break;
-              }
-            case MAVLINK_MSG_ID_ATTITUDE:
-              {
-                // mavlink_attitude_t attitude;
-                // mavlink_msg_attitude_decode(&message, &attitude);
-                // printf("Got message ATTITUDE\n");
-                // printf("\t time: %u\n", attitude.time_boot_ms);
-                // printf("\t roll: %f\n", attitude.roll);
-                // printf("\t pitch: %f\n", attitude.pitch);
-                // printf("\t yaw: %f\n", attitude.yaw);
-                received = true;
-                break;
-              }
-            case MAVLINK_MSG_ID_RC_CHANNELS:
-              {
+                                received = true;
 
-                mavlink_rc_channels_t rc;
-                mavlink_msg_rc_channels_decode(&message, &rc);
+                                break;
+                            }
+                        case MAVLINK_MSG_ID_ATTITUDE:
+                            {
+                                // mavlink_attitude_t attitude;
+                                // mavlink_msg_attitude_decode(&message, &attitude);
+                                // printf("Got message ATTITUDE\n");
+                                // printf("\t time: %u\n", attitude.time_boot_ms);
+                                // printf("\t roll: %f\n", attitude.roll);
+                                // printf("\t pitch: %f\n", attitude.pitch);
+                                // printf("\t yaw: %f\n", attitude.yaw);
+                                att_cnt++;
+                                received = true;
+                                break;
+                            }
+                        case MAVLINK_MSG_ID_RC_CHANNELS:
+                            {
 
-                //if (rc.rssi != 0 )
-                //  {
-                //     printf("Got RC\n");
-                //    printf("\t time (s): %u \n", rc.time_boot_ms/1000);
-                //  printf("\t chan1(roll): %u \n", rc.chan1_raw);
-                //  printf("\t chan2(pitch): %u \n", rc.chan2_raw);
-                //  printf("\t chan3(thrust): %u \n", rc.chan3_raw);
-                //  printf("\t chan4(yaw): %u \n", rc.chan4_raw);
-                //}
+                                mavlink_rc_channels_t rc;
+                                mavlink_msg_rc_channels_decode(&message, &rc);
 
-                // received = true;
-                break;
-              }
-            case MAVLINK_MSG_ID_MANUAL_CONTROL:
-              {
-                mavlink_manual_control_t manual_control;
-                mavlink_msg_manual_control_decode(&message, &manual_control);
+                                //if (rc.rssi != 0 )
+                                //  {
+                                //     printf("Got RC\n");
+                                //    printf("\t time (s): %u \n", rc.time_boot_ms/1000);
+                                //  printf("\t chan1(roll): %u \n", rc.chan1_raw);
+                                //  printf("\t chan2(pitch): %u \n", rc.chan2_raw);
+                                //  printf("\t chan3(thrust): %u \n", rc.chan3_raw);
+                                //  printf("\t chan4(yaw): %u \n", rc.chan4_raw);
+                                //}
 
-                // printf("Got manual control\n");
-                // printf(" x: %d \n", manual_control.x);
-                // printf(" y: %d \n", manual_control.y);
-                // printf(" z: %d \n", manual_control.z);
-                // printf(" r: %d \n", manual_control.r);
+                                rc_cnt++;
+                                received = true;
+                                break;
+                            }
+                        case MAVLINK_MSG_ID_MANUAL_CONTROL:
+                            {
+                                mavlink_manual_control_t manual_control;
+                                mavlink_msg_manual_control_decode(&message, &manual_control);
 
-                // received = true;
-                break;
-              }
-            case MAVLINK_MSG_ID_HIGHRES_IMU:
-              {
-                // Decode Message
-                mavlink_highres_imu_t imu;
-                mavlink_msg_highres_imu_decode(&message, &imu);
+                                // printf("Got manual control\n");
+                                // printf(" x: %d \n", manual_control.x);
+                                // printf(" y: %d \n", manual_control.y);
+                                // printf(" z: %d \n", manual_control.z);
+                                // printf(" r: %d \n", manual_control.r);
 
-                // Do something with the message
-                // printf("Got message HIGHRES_IMU (spec: https://pixhawk.ethz.ch/mavlink/#HIGHRES_IMU)\n");
-                // printf("    time: %llu\n", imu.time_usec);
-                // printf("    acc  (NED):\t% f\t% f\t% f (m/s^2)\n", imu.xacc , imu.yacc , imu.zacc );
-                // printf("    gyro (NED):\t% f\t% f\t% f (rad/s)\n", imu.xgyro, imu.ygyro, imu.zgyro);
-                // printf("    mag  (NED):\t% f\t% f\t% f (Ga)\n"   , imu.xmag , imu.ymag , imu.zmag );
-                // printf("    baro: \t %f (mBar)\n"  , imu.abs_pressure);
-                // printf("    altitude: \t %f (m)\n" , imu.pressure_alt);
-                // printf("    temperature: \t %f C\n", imu.temperature );
+                                manual_cnt++;
+                                received = true;
+                                break;
+                            }
+                        case MAVLINK_MSG_ID_HIGHRES_IMU:
+                            {
+                                // Decode Message
+                                mavlink_highres_imu_t imu;
+                                mavlink_msg_highres_imu_decode(&message, &imu);
 
-                // received = true;
-                break;
-              }
-            default:
-              break;
-            }
+                                // Do something with the message
+                                // printf("Got message HIGHRES_IMU (spec: https://pixhawk.ethz.ch/mavlink/#HIGHRES_IMU)\n");
+                                // printf("    time: %llu\n", imu.time_usec);
+                                // printf("    acc  (NED):\t% f\t% f\t% f (m/s^2)\n", imu.xacc , imu.yacc , imu.zacc );
+                                // printf("    gyro (NED):\t% f\t% f\t% f (rad/s)\n", imu.xgyro, imu.ygyro, imu.zgyro);
+                                // printf("    mag  (NED):\t% f\t% f\t% f (Ga)\n"   , imu.xmag , imu.ymag , imu.zmag );
+                                // printf("    baro: \t %f (mBar)\n"  , imu.abs_pressure);
+                                // printf("    altitude: \t %f (m)\n" , imu.pressure_alt);
+                                // printf("    temperature: \t %f C\n", imu.temperature );
+
+                                imu_cnt++;
+                                received = true;
+                                break;
+                            }
+                        case MAVLINK_MSG_ID_GPS_RAW_INT:
+                            {
+                                mavlink_gps_raw_int_t gps;
+                                mavlink_msg_gps_raw_int_decode(&message, &gps);
+                                gps_cnt++;
+                                received = true;
+                                break;
+                            }
+                        case MAVLINK_MSG_ID_SYS_STATUS:
+                            {
+                                mavlink_sys_status_t sys;
+                                mavlink_msg_sys_status_decode(&message, &sys);
+                                sys_cnt++;
+                                received = true;
+                                break;
+                            }
+                        default:
+                            break;
+                        }
+                }
         }
-    }
 
-  return 0;
+    return 0;
 }
 
 
@@ -294,35 +389,35 @@ read_message()
 int
 write_message(float x, float y, float z, float yaw)
 {
-  // --------------------------------------------------------------------------
-  //   PACK PAYLOAD
-  // --------------------------------------------------------------------------
-  mavlink_set_position_target_local_ned_t sp;
-  sp.time_boot_ms     = 0;
-  sp.type_mask        = MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_POSITION &
-    MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_YAW_ANGLE;
-  sp.target_system    = sysid;
-  sp.target_component = autopilot_compid;
-  sp.coordinate_frame = MAV_FRAME_LOCAL_NED;
-  sp.x = x;
-  sp.y = y;
-  sp.z = z;
-  sp.yaw = yaw;
+    // --------------------------------------------------------------------------
+    //   PACK PAYLOAD
+    // --------------------------------------------------------------------------
+    mavlink_set_position_target_local_ned_t sp;
+    sp.time_boot_ms     = 0;
+    sp.type_mask        = MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_POSITION &
+        MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_YAW_ANGLE;
+    sp.target_system    = sysid;
+    sp.target_component = autopilot_compid;
+    sp.coordinate_frame = MAV_FRAME_LOCAL_NED;
+    sp.x = x;
+    sp.y = y;
+    sp.z = z;
+    sp.yaw = yaw;
 
-  // --------------------------------------------------------------------------
-  //   ENCODE
-  // --------------------------------------------------------------------------
-  mavlink_message_t message;
-  mavlink_msg_set_position_target_local_ned_encode(sysid, compid, &message, &sp);
+    // --------------------------------------------------------------------------
+    //   ENCODE
+    // --------------------------------------------------------------------------
+    mavlink_message_t message;
+    mavlink_msg_set_position_target_local_ned_encode(sysid, compid, &message, &sp);
 
-  // --------------------------------------------------------------------------
-  //   WRITE
-  // --------------------------------------------------------------------------
-  int len = write_serial(message);
-  printf("Sent buffer of length %i\n",len);
+    // --------------------------------------------------------------------------
+    //   WRITE
+    // --------------------------------------------------------------------------
+    int len = write_serial(message);
+    printf("Sent buffer of length %i\n",len);
 
-  // Done!
-  return 0;
+    // Done!
+    return 0;
 }
 
 
@@ -336,45 +431,45 @@ void
 parse_commandline(int argc, char **argv, char *&uart_name, int &baudrate)
 {
 
-  const char *commandline_usage = "usage: mavlink_serial -d <devicename> -b <baudrate>";
-  int i;
+    const char *commandline_usage = "usage: mavlink_serial -d <devicename> -b <baudrate>";
+    int i;
 
-  // Read input arguments
-  for (i = 1; i < argc; i++) { // argv[0] is "mavlink"
+    // Read input arguments
+    for (i = 1; i < argc; i++) { // argv[0] is "mavlink"
 
-    // Help
-    if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
-      printf("%s\n",commandline_usage);
-      throw EXIT_FAILURE;
+        // Help
+        if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+            printf("%s\n",commandline_usage);
+            throw EXIT_FAILURE;
+        }
+
+        // UART device ID
+        if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--device") == 0) {
+            if (argc > i + 1) {
+                uart_name = argv[i + 1];
+
+            } else {
+                printf("%s\n",commandline_usage);
+                throw EXIT_FAILURE;
+            }
+        }
+
+        // Baud rate
+        if (strcmp(argv[i], "-b") == 0 || strcmp(argv[i], "--baud") == 0) {
+            if (argc > i + 1) {
+                baudrate = atoi(argv[i + 1]);
+
+            } else {
+                printf("%s\n",commandline_usage);
+                throw EXIT_FAILURE;
+            }
+        }
+
     }
+    // end: for each input argument
 
-    // UART device ID
-    if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--device") == 0) {
-      if (argc > i + 1) {
-        uart_name = argv[i + 1];
-
-      } else {
-        printf("%s\n",commandline_usage);
-        throw EXIT_FAILURE;
-      }
-    }
-
-    // Baud rate
-    if (strcmp(argv[i], "-b") == 0 || strcmp(argv[i], "--baud") == 0) {
-      if (argc > i + 1) {
-        baudrate = atoi(argv[i + 1]);
-
-      } else {
-        printf("%s\n",commandline_usage);
-        throw EXIT_FAILURE;
-      }
-    }
-
-  }
-  // end: for each input argument
-
-  // Done!
-  return;
+    // Done!
+    return;
 }
 
 
@@ -384,8 +479,8 @@ parse_commandline(int argc, char **argv, char *&uart_name, int &baudrate)
 void
 quit_handler(int sig)
 {
-  printf("Terminating at user's request\n");
-  CMD_STREAM_FLAG = 0;
+    printf("Terminating at user's request\n");
+    CMD_STREAM_FLAG = 0;
 }
 
 
@@ -396,14 +491,14 @@ int
 main (int argc, char **argv)
 {
 
-  try
-    {
-      return top( argc , argv );
-    }
-  catch ( int failure )
-    {
-      return failure;
-    }
+    try
+        {
+            return top( argc , argv );
+        }
+    catch ( int failure )
+        {
+            return failure;
+        }
 
 }
 
