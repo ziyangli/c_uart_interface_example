@@ -373,6 +373,13 @@ read_message()
                                 received = true;
                                 break;
                             }
+                        case MAVLINK_MSG_ID_COMMAND_LONG:
+                            {
+                                mavlink_command_long_t command;
+                                mavlink_msg_command_long_decode(&message, &command);
+                                printf("get command\n");
+                                received = true;
+                                break;}
                         default:
                             break;
                         }
