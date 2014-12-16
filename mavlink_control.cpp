@@ -327,6 +327,15 @@ read_message()
                                 mavlink_manual_control_t manual_control;
                                 mavlink_msg_manual_control_decode(&message, &manual_control);
 
+                                unsigned int b = manual_control.buttons;
+                                printf("mode: %u\n", b);
+                                printf("\tmode switch: %u\n", b & 0x0003);
+                                printf("\treturn switch: %u\n", (b & 0x000B)>>2);
+                                printf("\tposctl switch: %u\n", (b & 0x0030)>>4);
+                                printf("\tloiter switch: %u\n", (b & 0x00B0)>>6);
+                                printf("\tacro switch: %u\n", (b & 0x0300)>>8);
+                                printf("\toffboard switch: %u\n", (b & 0xB000)>>10);
+
                                 // printf("Got manual control\n");
                                 // printf(" x: %d \n", manual_control.x);
                                 // printf(" y: %d \n", manual_control.y);
